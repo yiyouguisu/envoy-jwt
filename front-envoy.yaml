@@ -1,0 +1,88 @@
+static_resources:
+  listeners:
+  - address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 80
+    filter_chains:
+    - filters:
+      - name: envoy.http_connection_manager
+        config:
+          generate_request_id: true
+          use_remote_address: true
+          tracing:
+            operation_name: egress
+          codec_type: auto
+          stat_prefix: ingress_http
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: backend
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: /
+                route:
+                  cluster: service1
+            validate_clusters: false
+          http_filters:
+          - name: envoy.filters.http.jwt_authn
+            config:
+              providers:
+                jwt_provider:
+                  issuer: www.service.com
+                  local_jwks:
+                    inline_string: |
+                      {
+                        "keys": [{
+                          "q": "4ft39a2kaC2lpaL8TfVkDAaKcUAreistwKoYfx_bL3Qbgn_U5gwkZkmJYsh7_I8VObfDLjXFuoyPPX3BQDZe1lzhFm1whI40NfDz8QL4hPU-nFPZkvmkpOmxNscitRTp71wAn4pgG42OMFQvAbzHAcUjUWl2kr4NPC249buKQ_k",
+                          "d": "Vnwi4NMnohYTtL6Ej2J06GTdTrDKVfhbLCDnqapm225fsHzaGHl0HXStve2V4xpGDleIrJpabDOzu_4m5i-D62du0OMOkxYR2off8TlZ8obbr3tw-HwnfjCQgkqH7sjfa1nmsXi1NS26BTQR661pXJurdOYVYGHHM40PAgAVwToc-j0-aOgBXDtJdyVGEugaS64GLwaS7SuhEWPjr_GrFYtkC8fOsnoLzWWOFipFHnpiOkV-xxqI0_yDUey1iifLo3wf90kn1vhcBc5xwnHDMRzHA0eROuM6uKsi9GzvqMBm-Lar0hM6EQ_MZhM_AHlY0P6yGSyirrvwdXiWBt9tIQ",
+                          "e": "AQAB",
+                          "kty": "RSA",
+                          "p": "xv9SW_NDdtJagBT_vSLhV8lblw3mIpl-wOyQ31wvnRpb1gXljtGyvUE9xYLJUxR45AU151jmJUkZyj-TqvAZS_IRI-7yWGYbLj7ai98nMvBDVNEb76L4SlzLNwizaHQiqnbQ4HOcRXs1cvnDZlm49Zf84Oo5OUy5Dblz8zPpqtc",
+                          "qi": "VYAafz9i6Y2XrHlSjwx9Q4EI6rA0VqMHxn2jLatQepcL3pHEBtLNbkhPuxDm7alsnSAgrBRZlfnu-aqiEpNMq90_jgajwOBH5cgegM0g7PwRjz5TokGtuBvLGIeW98_l7NFgAOiAgHFow-qVxK-BZz4-s-QCaG2DrG6pkEw1hw0",
+                          "dq": "wu2abWZKAb8WOslbX5fDpAfkVYontqsWPTG8DbQZ6lX6ANhpecKRh1X5Vydeo918TpwvlWW22JK0YDNghhYgOkJFuoXOX9kWOk1M7uFEI9Q0HL7LV9dVaRdX0Mt3KcIPhHPU6cl_22SAeTm0jogbFXDKZUhWin-7hORfvj_2JWk",
+                          "dp": "bkU1gjZ-_-z4sVjxjgEyFc9CraXKDQo5rvZoIR2YVNoyYZrK5iVVgoIQlM4weZUymEg64oPkpGypmeU5EtQRcIAm916FdG7ASRQTTsbNlfCFnw5xCI2qQKrDATAVGqCgRQ2qGXZ29hmcOKYmnSTC1XTvcELaiuH0-aH2mqH9rek",
+                          "n": "r6ng-DmStdyo_GJD_ngHUmrGKEIVOL_zFlO36m-OjsJYcJKUBzNWhSO-lKWhNZ6cXn3DQg0ZbNMLkL90pih6-BvBSrS7vJDR2C9Oefjyr4oN2wU5ZPIloECaxLF8hwMcnKkLDhobwJ1HOTB4V3WrkOZXgE5HjY119UZ1crwpdTka1gaTPorvC2YlIo9_1nu7Vrt5Hp0DYp0JZVHFFhm1FNM8FIYw16BA2JcKjhQI89Pw_s65hvAri6FgVappXzlj0nF4ShVTG_NA0W1Gw6dCv9ITrH43yAwy21PiCs0mi8NeDqd0KRN33ucxrAq5na7VwgLhipic1FoX9iGnyuNwHw"
+                        }]
+                      }
+                  forward: true
+                  forward_payload_header: "plain-authorization"
+              rules:
+              - match:
+                  prefix: /service/1
+                requires:
+                  provider_and_audiences:
+                    provider_name: jwt_provider
+                    audiences:
+                      http://www.service.com
+          - name: envoy.router
+            config: {}
+  clusters:
+  - name: service1
+    connect_timeout: 0.250s
+    type: strict_dns
+    lb_policy: round_robin
+    http2_protocol_options: {}
+    load_assignment:
+      cluster_name: service1
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: service1
+                port_value: 80
+tracing:
+  http:
+    name: envoy.local
+    config:
+      collector_cluster: local
+      collector_endpoint: /var/log/trace_log.log
+admin:
+  access_log_path: "/var/log/envoy_log.log"
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901

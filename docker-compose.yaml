@@ -1,0 +1,30 @@
+version: '3'
+services:
+
+  front-envoy:
+    build:
+      context: ./
+      dockerfile: Dockerfile-frontenvoy
+    image: yiyouguisu/envoy_jwt:latest
+    networks:
+      - envoy_jwt_network
+    expose:
+      - "80"
+      - "9901"
+    ports:
+      - "8001:80"
+      - "9901:9901"
+
+  service1: 
+    build:
+      context: ./
+      dockerfile: Dockerfile-service
+    networks:
+      envoy_jwt_network:
+    environment:
+      - SERVICE_NAME=1
+    expose:
+      - "80"
+
+networks:
+  envoy_jwt_network: {}

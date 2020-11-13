@@ -1,0 +1,19 @@
+{
+  "hosts": [
+    "service.com",
+    "www.service.com",
+    "https://www.service.com",
+    "127.0.0.1"
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [{
+    "C": "CN",
+    "L": "SH",
+    "O": "Envoy TLS Test",
+    "OU": "CA",
+    "ST": "SH"
+  }]
+}
